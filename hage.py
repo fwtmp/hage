@@ -313,10 +313,10 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         a = DQNHage(recycle=False)
         a.train(nb_steps=12000, log_interval=2000, verbose=1)
-    else if sys.argv[1] == 'test':
+    elif sys.argv[1] == 'test':
         a = DQNHage(recycle=True)
         a.test(nb_episodes=10, verbose=1, visualize=True)
-    else if sys.argv[1] == 'stat':
+    elif sys.argv[1] == 'stat':
         a = DQNHage(recycle=True)
         h = a.test(nb_episodes=10000, visualize=False, verbose=0)
 
