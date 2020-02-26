@@ -53,7 +53,7 @@ class Hage(gym.Env):
 
     def __init__(self):
         super().__init__()
-        self.action_space = spaces.Discrete(len(self.hand))
+#        self.action_space = spaces.Discrete(len(self.hand))
         self.observation_space = spaces.Box(
             low=0, high=2, shape=((player_num + 1 ) * 2,round_num),
             dtype='float32'
@@ -97,13 +97,24 @@ class Hage(gym.Env):
             if acquired == 1.:
                 score += self.deck[i]
         return score
-        
+
+    @property
+    def action_space(self):
+        return spaces.Discrete(len([used for used in self.used if used == 0.]))
+
     def step(self, action):
         done = False
         reward = 0.
+        index = 0
+        for i,used in enumerate(self.used):
+            if used == 0.:
+                index += 1
+            if index == action:
+                action = i
+                break
         if self.used[action] == 1:
-            reward = -1000.
-#            print('Invalid Action!!!')
+            reward = -55.
+            print('Invalid Action!!!')
             done = True
         else:
             self.used[action] = 1
@@ -114,12 +125,12 @@ class Hage(gym.Env):
             if self.deck[self.point] < 0:
                 for i,card in enumerate(cards):
                     if cards.count(card) == 1:
-                        if winner == None or card < cards[winner]:
+                        if winner is None or card < cards[winner]:
                             winner = i
             else:
                 for i,card in enumerate(cards):
                     if cards.count(card) == 1:
-                        if winner == None or card > cards[winner]:
+                        if winner is None or card > cards[winner]:
                             winner = i
 
             if winner == None:
@@ -318,7 +329,7 @@ if __name__ == '__main__':
         a.test(nb_episodes=10, verbose=1, visualize=True)
     elif sys.argv[1] == 'stat':
         a = DQNHage(recycle=True)
-        h = a.test(nb_episodes=10000, visualize=False, verbose=0)
+        h = a.test(nb_episodes=1000, visualize=False, verbose=0)
 
         rwds = h.history['episode_reward']
         win_rate = sum(rwds)/(1000 * len(rwds))
