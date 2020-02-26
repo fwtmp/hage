@@ -15,7 +15,7 @@ from rl.policy import BoltzmannQPolicy
 from rl.agents.dqn import DQNAgent
 from keras.optimizers import Adam
 
-player_num = 5
+player_num = 3
 npc_player_num = player_num - 1
 round_num = 15
 
@@ -102,7 +102,7 @@ class Hage(gym.Env):
         done = False
         reward = 0.
         if self.used[action] == 1:
-            reward = -55.
+            reward = -1000.
 #            print('Invalid Action!!!')
             done = True
         else:
@@ -165,14 +165,14 @@ class Hage(gym.Env):
         ret = []
         for i, aq in enumerate(acquired):
             if aq == 1:
-                ret.append(Hage.deck[i])
+                ret.append(int(Hage.deck[i]))
         return ret
     
     def get_used_cards(self, used):
         ret = []
         for i, card in enumerate(used):
             if card == 1:
-                ret.append(Hage.hand[i])
+                ret.append(int(Hage.hand[i]))
         return ret
 
 class TrainIntervalLogger2(TrainIntervalLogger):
@@ -226,7 +226,7 @@ class DQNHage:
 
         # configure agent.
         memory = SequentialMemory(limit=50000, window_length=1)
-        policy = BoltzmannQPolicy(tau=1000)
+        policy = BoltzmannQPolicy(tau=100)
         self.dqn = DQNAgent(model=self.model, nb_actions=self.nb_actions, memory=memory,
                             nb_steps_warmup=1000, target_model_update=1e-2, policy=policy)
         self.dqn.compile(Adam(learning_rate=1e-3), metrics=[])
@@ -310,11 +310,16 @@ class DQNHage:
                              verbose=verbose, visualize=visualize)
         return hist
 if __name__ == '__main__':
-    a = DQNHage(recycle=True)
-#    a.train(nb_steps=20000, log_interval=1000, verbose=1)
-#    a.test(nb_episodes=10, verbose=1, visualize=True)
-    h = a.test(nb_episodes=1000, visualize=False, verbose=0)
+    if len(sys.argv) < 2:
+        a = DQNHage(recycle=False)
+        a.train(nb_steps=12000, log_interval=2000, verbose=1)
+    else if sys.argv[1] == 'test':
+        a = DQNHage(recycle=True)
+        a.test(nb_episodes=10, verbose=1, visualize=True)
+    else if sys.argv[1] == 'stat':
+        a = DQNHage(recycle=True)
+        h = a.test(nb_episodes=10000, visualize=False, verbose=0)
 
-    rwds = h.history['episode_reward']
-    win_rate = sum(rwds)/(1000 * len(rwds))
-    print('勝率(1000戦)：' + str(win_rate))
+        rwds = h.history['episode_reward']
+        win_rate = sum(rwds)/(1000 * len(rwds))
+        print('勝率(10000戦)：' + str(win_rate))
