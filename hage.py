@@ -15,7 +15,7 @@ from rl.policy import BoltzmannQPolicy
 from rl.agents.dqn import DQNAgent
 from keras.optimizers import Adam
 
-player_num = 3
+player_num = 5
 npc_player_num = player_num - 1
 round_num = 15
 
@@ -106,51 +106,53 @@ class Hage(gym.Env):
         done = False
         reward = 0.
         index = 0
+#        action_prev = action
         for i,used in enumerate(self.used):
-            if used == 0.:
-                index += 1
-            if index == action:
+            if used == 1.:
+                continue
+            if action == index:
                 action = i
                 break
+            index += 1
         if self.used[action] == 1:
-            reward = -55.
-            print('Invalid Action!!!')
+            # 可能な中から一番高いものに選択しなおす
+            for i,used in enumerate(self.used):
+                if used == 0.:
+                    action = i
+        self.used[action] = 1
+        self.steps += 1
+        cards = [ pl.play() for pl in self.npc_players ]
+        cards += [action]
+        winner = None
+        if self.deck[self.point] < 0:
+            for i,card in enumerate(cards):
+                if cards.count(card) == 1:
+                    if winner is None or card < cards[winner]:
+                        winner = i
+        else:
+            for i,card in enumerate(cards):
+                if cards.count(card) == 1:
+                    if winner is None or card > cards[winner]:
+                        winner = i
+
+        if winner == None:
+            self.void[self.point] = 1.
+        elif winner == npc_player_num:
+            self.acquired[self.point] = 1.
+        else:
+            self.npc_players[winner].get_point(self.point)
+
+        if self.steps == 15:
+            scores = [self.count_score(player.acquired) for player in self.npc_players]
+            ai_score = self.count_score(self.acquired)
+            game_winner = [score for score in scores if score > ai_score]
+#                print("scores {} {}".format(scores, ai_score))
+            if len(game_winner) == 0:
+                reward = 1000.
+#                    print("AI Won!")
             done = True
         else:
-            self.used[action] = 1
-            self.steps += 1
-            cards = [ pl.play() for pl in self.npc_players ]
-            cards += [action]
-            winner = None
-            if self.deck[self.point] < 0:
-                for i,card in enumerate(cards):
-                    if cards.count(card) == 1:
-                        if winner is None or card < cards[winner]:
-                            winner = i
-            else:
-                for i,card in enumerate(cards):
-                    if cards.count(card) == 1:
-                        if winner is None or card > cards[winner]:
-                            winner = i
-
-            if winner == None:
-                self.void[self.point] = 1.
-            elif winner == npc_player_num:
-                self.acquired[self.point] = 1.
-            else:
-                self.npc_players[winner].get_point(self.point)
-
-            if self.steps == 15:
-                scores = [self.count_score(player.acquired) for player in self.npc_players]
-                ai_score = self.count_score(self.acquired)
-                game_winner = [score for score in scores if score > ai_score]
-#                print("scores {} {}".format(scores, ai_score))
-                if len(game_winner) == 0:
-                    reward = 1000.
-#                    print("AI Won!")
-                done = True
-            else:
-                self.point = self.game_deck.pop()
+            self.point = self.game_deck.pop()
 
         return self.get_observation(), reward, done, {}
 
@@ -163,12 +165,12 @@ class Hage(gym.Env):
             super().render(mode=mode)
         strs = []
         for i, player in enumerate(self.npc_players):
-            strs.append("player{} acquried:{}\n".format(i , self.get_scores(player.acquired)))
-            strs.append("player{} used:{}\n".format(i, self.get_used_cards(player.used)))
+            strs.append("player{} acquried:{}\n".format(i+1 , self.get_scores(player.acquired)))
+            strs.append("player{} used:{}\n".format(i+1, self.get_used_cards(player.used)))
         strs.append("playerAI acquired:{}\n".format(self.get_scores(self.acquired)))
         strs.append("playerAI used:{}\n".format(self.get_used_cards(self.used)))
         strs.append("discard:{}\n".format(self.get_scores(self.void)))
-        strs.append("placed:{}\n".format(Hage.deck[self.point]))
+#        strs.append("placed:{}\n".format(Hage.deck[self.point]))
         outfile.write(''.join(strs))
         return outfile
 
@@ -323,14 +325,14 @@ class DQNHage:
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         a = DQNHage(recycle=False)
-        a.train(nb_steps=12000, log_interval=2000, verbose=1)
+        a.train(nb_steps=15000, log_interval=1500, verbose=1)
     elif sys.argv[1] == 'test':
         a = DQNHage(recycle=True)
         a.test(nb_episodes=10, verbose=1, visualize=True)
     elif sys.argv[1] == 'stat':
         a = DQNHage(recycle=True)
-        h = a.test(nb_episodes=1000, visualize=False, verbose=0)
+        h = a.test(nb_episodes=2000, visualize=False, verbose=0)
 
         rwds = h.history['episode_reward']
         win_rate = sum(rwds)/(1000 * len(rwds))
-        print('勝率(10000戦)：' + str(win_rate))
+        print('勝率(2000戦)：' + str(win_rate))
