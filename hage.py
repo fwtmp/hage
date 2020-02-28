@@ -7,13 +7,14 @@ from io import StringIO
 from os.path import exists
 from os import mkdir
 from sys import exc_info
-from rl.callbacks import TrainIntervalLogger, TrainEpisodeLogger
+from rl.callbacks import TrainEpisodeLogger
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
 from rl.memory import SequentialMemory
-from rl.policy import BoltzmannQPolicy
+from rl.policy import BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.agents.dqn import DQNAgent
 from keras.optimizers import Adam
+from TrainIntervalLogger2 import TrainIntervalLogger2
 
 player_num = 5
 npc_player_num = player_num - 1
@@ -188,32 +189,6 @@ class Hage(gym.Env):
                 ret.append(int(Hage.hand[i]))
         return ret
 
-class TrainIntervalLogger2(TrainIntervalLogger):
-    def __init__(self, interval=10000):
-        super().__init__(interval=interval)
-        self.records = {}
-
-    def on_train_begin(self, logs):
-        super().on_train_begin(logs)
-        self.records['interval'] = []
-        self.records['episode_reward'] = []
-        for metrics_name in self.metrics_names:
-            self.records[metrics_name] = []
-    
-    def on_step_begin(self, step, logs):
-        if self.step % self.interval == 0:
-            if len(self.episode_rewards) > 9:
-                self.records['interval'].append(self.step // self.interval)
-                self.records['episode_reward'].append(np.mean(self.episode_rewards))
-                metrics = np.array(self.metrics)
-                assert metrics.shape == (self.interval, len(self.metrics_names))
-                if not np.isnan(metrics).all():
-                    means = np.nanmean(self.metrics, axis=0)
-                    assert means.shape == (len(self.metrics_names),)
-                    for name, mean in zip(self.metrics_names, means):
-                        self.records[name].append(mean)
-            super().on_step_begin(step, logs)
-
 class DQNHage:
     weightdir = './data'
     weightfile = './data/dqn_{}_weights.h5'
@@ -239,7 +214,8 @@ class DQNHage:
 
         # configure agent.
         memory = SequentialMemory(limit=50000, window_length=1)
-        policy = BoltzmannQPolicy(tau=100)
+#        policy = BoltzmannQPolicy(tau=100)
+        policy = EpsGreedyQPolicy()
         self.dqn = DQNAgent(model=self.model, nb_actions=self.nb_actions, memory=memory,
                             nb_steps_warmup=1000, target_model_update=1e-2, policy=policy)
         self.dqn.compile(Adam(learning_rate=1e-3), metrics=[])
@@ -325,14 +301,14 @@ class DQNHage:
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         a = DQNHage(recycle=False)
-        a.train(nb_steps=15000, log_interval=1500, verbose=1)
+        a.train(nb_steps=30000, log_interval=3000, verbose=1)
     elif sys.argv[1] == 'test':
         a = DQNHage(recycle=True)
         a.test(nb_episodes=10, verbose=1, visualize=True)
     elif sys.argv[1] == 'stat':
         a = DQNHage(recycle=True)
-        h = a.test(nb_episodes=2000, visualize=False, verbose=0)
+        h = a.test(nb_episodes=10000, visualize=False, verbose=0)
 
         rwds = h.history['episode_reward']
         win_rate = sum(rwds)/(1000 * len(rwds))
-        print('勝率(2000戦)：' + str(win_rate))
+        print('勝率(10000戦)：' + str(win_rate))
