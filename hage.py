@@ -73,21 +73,22 @@ class AIPlayer(AbstractPlayer):
         self.action = 0
 
     def set_action(self, action):
-        # 選択されたアクションに対応する手札を選択
-        index = 0
-        for i,used in enumerate(self.used):
-            if used == 1.:
-                continue
-            if action == index:
-                self.action = i
-                break
-            index += 1
-        # 不可能なアクションを選択された場合
-        if self.used[self.action] == 1:
-            # 可能な中から一番高いものに選択しなおす
-            for i,used in enumerate(self.used):
-                if used == 0.:
-                    self.action = i
+        # # 選択されたアクションに対応する手札を選択
+        # index = 0
+        # for i,used in enumerate(self.used):
+        #     if used == 1.:
+        #         continue
+        #     if action == index:
+        #         self.action = i
+        #         break
+        #     index += 1
+        # # 不可能なアクションを選択された場合
+        # if self.used[self.action] == 1:
+        #     # 可能な中から一番高いものに選択しなおす
+        #     for i,used in enumerate(self.used):
+        #         if used == 0.:
+        #             self.action = i
+        self.action = action
         self.used[self.action] = 1
 
     def play(self):
@@ -122,7 +123,9 @@ class TrainedPlayer(AbstractPlayer):
 
     def play(self):
         self.action = self.dqn.forward(self.env.get_observation(self.number))
-        # print("Trained AI Action:{}".format(self.action))
+        print("Trained AI Action:{}".format(
+            self.dqn.compute_q_values([self.env.get_observation(self.number)])
+            ))
         # 不可能なアクションを選択された場合
         if self.used[self.action] == 1:
             # 一番近くの高いものに選択しなおす
@@ -203,7 +206,7 @@ class Hage(gym.Env):
 
     def __init__(self):
         super().__init__()
-#        self.action_space = spaces.Discrete(len(HAND))
+        self.action_space = spaces.Discrete(len(HAND))
         self.observation_space = spaces.Box(
             low=0, high=2, shape=((PLAYER_NUM + 1 ) * 2,ROUND_NUM),
             dtype='float32'
@@ -229,25 +232,29 @@ class Hage(gym.Env):
     def close(self):
         super().close()
 
-    @property
-    def action_space(self):
-        return spaces.Discrete(len([used for used in self.player.used if used == 0.]))
+    # @property
+    # def action_space(self):
+    #     return spaces.Discrete(len([used for used in self.player.used if used == 0.]))
 
     def step(self, action):
         done = False
         reward = 0.
-        self.player.set_action(action)
-        self.env.judge()
-        self.steps += 1
-
-        if self.steps == 15:
-            winners = self.env.get_winners()
-            if (PLAYER_NUM - 1) in winners:
-                reward = 1000.
-#                    print("AI Won!")
+        if self.player.used[action] == 1.:
+            reward = -11.
             done = True
         else:
-            self.env.step()
+            self.player.set_action(action)
+            self.env.judge()
+            self.steps += 1
+
+            if self.steps == 15:
+                winners = self.env.get_winners()
+                if (PLAYER_NUM - 1) in winners:
+                    reward = 1000.
+    #                    print("AI Won!")
+                done = True
+            else:
+                self.env.step()
 
         return self.env.get_observation(), reward, done, {}
 

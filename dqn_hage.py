@@ -125,14 +125,14 @@ class DQNHage:
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         a = DQNHage(recycle=False)
-        a.train(nb_steps=30000, log_interval=3000, verbose=1)
+        a.train(nb_steps=51000, log_interval=3000, verbose=1)
     elif sys.argv[1] == 'test':
         a = DQNHage(recycle=True)
         a.test(nb_episodes=10, verbose=1, visualize=True)
     elif sys.argv[1] == 'stat':
         a = DQNHage(recycle=True)
-        h = a.test(nb_episodes=10000, visualize=False, verbose=0)
+        h = a.test(nb_episodes=3000, visualize=False, verbose=0)
 
         rwds = h.history['episode_reward']
         win_rate = sum(rwds)/(1000 * len(rwds))
-        print('勝率(10000戦)：' + str(win_rate))
+        print('勝率(3000戦)：' + str(win_rate))
