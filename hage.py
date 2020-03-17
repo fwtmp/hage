@@ -40,6 +40,7 @@ def get_used_cards(used):
     
 class AbstractPlayer:
     def __init__(self):
+        self.won = 0
         self.reset()
 
     def reset(self):
@@ -95,7 +96,7 @@ class AIPlayer(AbstractPlayer):
         return self.action
 
 class TrainedPlayer(AbstractPlayer):
-    def __init__(self, env, number):
+    def __init__(self, env, number, file_name):
         super().__init__()
         self.env = env
         self.number = number
@@ -109,6 +110,8 @@ class TrainedPlayer(AbstractPlayer):
         ).shape))
         self.model.add(Dense(256))
         self.model.add(Activation('relu'))
+        self.model.add(Dense(256))
+        self.model.add(Activation('relu'))
         self.model.add(Dense(self.nb_actions))
         self.model.add(Activation('linear'))
 
@@ -118,14 +121,14 @@ class TrainedPlayer(AbstractPlayer):
         self.dqn = DQNAgent(model=self.model, nb_actions=self.nb_actions, memory=memory,
                             nb_steps_warmup=1000, target_model_update=1e-2, policy=policy)
         self.dqn.compile(Adam(learning_rate=1e-3), metrics=[])
-        self.dqn.load_weights('./data/dqn_hage_{}players_weights_t.h5'.format(PLAYER_NUM))
+        self.dqn.load_weights(file_name)
         print('モデル読み込み……完了')
 
     def play(self):
         self.action = self.dqn.forward(self.env.get_observation(self.number))
-        print("Trained AI Action:{}".format(
-            self.dqn.compute_q_values([self.env.get_observation(self.number)])
-            ))
+        # print("Trained AI Action:{}".format(
+        #     self.dqn.compute_q_values([self.env.get_observation(self.number)])
+        #     ))
         # 不可能なアクションを選択された場合
         if self.used[self.action] == 1:
             # 一番近くの高いものに選択しなおす
@@ -197,7 +200,10 @@ class HageEnv():
 
     def get_winners(self):
         scores = [count_score(player.acquired) for player in self.players]
-        return [i for i, score in enumerate(scores) if np.max(scores) == score]
+        winners = [i for i, score in enumerate(scores) if np.max(scores) == score]
+        for i in winners:
+            self.players[i].won += 1
+        return winners
 
 class Hage(gym.Env):
     metadata = {
@@ -214,8 +220,11 @@ class Hage(gym.Env):
         self.seed()
         self.env = HageEnv(self.np_random)
         # for i in range(NPC_PLAYER_NUM): self.env.appned_player(RandomPlayer(self.np_random))
-        for i in range(NPC_PLAYER_NUM - 1): self.env.appned_player(RandomPlayer(self.np_random))
-        self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 1))
+        # for i in range(NPC_PLAYER_NUM - 1): self.env.appned_player(RandomPlayer(self.np_random))
+        for i in range(NPC_PLAYER_NUM - 2): self.env.appned_player(RandomPlayer(self.np_random))
+        # self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 3, './data/dqn_hage_{}players_weights_t3.h5'.format(PLAYER_NUM)))
+        self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 2, './data/dqn_hage_{}players_weights_t2.h5'.format(PLAYER_NUM)))
+        self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 1, './data/dqn_hage_{}players_weights_t.h5'.format(PLAYER_NUM)))
         self.player = AIPlayer()
         self.env.appned_player(self.player)
         self.reset()
@@ -251,7 +260,8 @@ class Hage(gym.Env):
                 winners = self.env.get_winners()
                 if (PLAYER_NUM - 1) in winners:
                     reward = 1000.
-    #                    print("AI Won!")
+                else:
+                    reward = 21.
                 done = True
             else:
                 self.env.step()
