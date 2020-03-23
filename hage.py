@@ -11,7 +11,7 @@ from rl.policy import BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.agents.dqn import DQNAgent
 from keras.optimizers import Adam
 
-PLAYER_NUM = 4
+PLAYER_NUM = 5
 NPC_PLAYER_NUM = PLAYER_NUM - 1
 ROUND_NUM = 15
 DECK = [-5.,-4.,-3.,-2.,-1.,1.,2.,3.,4.,5.,6.,7.,8.,9.,10.]
@@ -220,18 +220,21 @@ class Hage(gym.Env):
         self.seed()
         self.env = HageEnv(self.np_random)
         # for i in range(NPC_PLAYER_NUM): self.env.appned_player(RandomPlayer(self.np_random))
-        # for i in range(NPC_PLAYER_NUM - 1): self.env.appned_player(RandomPlayer(self.np_random))
-        for i in range(NPC_PLAYER_NUM - 2): self.env.appned_player(RandomPlayer(self.np_random))
+        for i in range(NPC_PLAYER_NUM - 1): self.env.appned_player(RandomPlayer(self.np_random))
+        # for i in range(NPC_PLAYER_NUM - 2): self.env.appned_player(RandomPlayer(self.np_random))
         # self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 3, './data/dqn_hage_{}players_weights_t3.h5'.format(PLAYER_NUM)))
-        self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 2, './data/dqn_hage_{}players_weights_t2.h5'.format(PLAYER_NUM)))
+        # self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 2, './data/dqn_hage_{}players_weights_t2.h5'.format(PLAYER_NUM)))
         self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 1, './data/dqn_hage_{}players_weights_t.h5'.format(PLAYER_NUM)))
         self.player = AIPlayer()
         self.env.appned_player(self.player)
+        self.finished = True
         self.reset()
 
     def reset(self):
-        self.steps = 0
-        self.env.reset()
+        if self.finished:
+            self.finished = False
+            self.steps = 0
+            self.env.reset()
         return self.env.get_observation()
 
     def seed(self, seed=None):
@@ -249,7 +252,8 @@ class Hage(gym.Env):
         done = False
         reward = 0.
         if self.player.used[action] == 1.:
-            reward = -11.
+            # reward = -11.
+            reward = -51.
             done = True
         else:
             self.player.set_action(action)
@@ -257,11 +261,13 @@ class Hage(gym.Env):
             self.steps += 1
 
             if self.steps == 15:
+                self.finished = True
                 winners = self.env.get_winners()
                 if (PLAYER_NUM - 1) in winners:
                     reward = 1000.
                 else:
-                    reward = 21.
+                    # pass
+                    reward = 201.
                 done = True
             else:
                 self.env.step()
