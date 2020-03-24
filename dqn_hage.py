@@ -40,8 +40,8 @@ class DQNHage:
 
         # configure agent.
         memory = SequentialMemory(limit=50000, window_length=1)
-#        policy = BoltzmannQPolicy(tau=100)
-        policy = EpsGreedyQPolicy()
+        policy = BoltzmannQPolicy(tau=100)
+        # policy = EpsGreedyQPolicy()
         self.dqn = DQNAgent(model=self.model, nb_actions=self.nb_actions, memory=memory,
                             nb_steps_warmup=1000, target_model_update=1e-2, policy=policy)
         self.dqn.compile(Adam(learning_rate=1e-3), metrics=[])
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         a.test(nb_episodes=10, verbose=1, visualize=True)
     elif sys.argv[1] == 'stat':
         a = DQNHage(recycle=True)
-        h = a.test(nb_episodes=1000, visualize=False, verbose=0)
+        h = a.test(nb_episodes=10000, visualize=False, verbose=0)
 
         print([player.won for player in a.env.env.players])
         # rwds = h.history['episode_reward']

@@ -220,10 +220,11 @@ class Hage(gym.Env):
         self.seed()
         self.env = HageEnv(self.np_random)
         # for i in range(NPC_PLAYER_NUM): self.env.appned_player(RandomPlayer(self.np_random))
-        for i in range(NPC_PLAYER_NUM - 1): self.env.appned_player(RandomPlayer(self.np_random))
+        # for i in range(NPC_PLAYER_NUM - 1): self.env.appned_player(RandomPlayer(self.np_random))
         # for i in range(NPC_PLAYER_NUM - 2): self.env.appned_player(RandomPlayer(self.np_random))
-        # self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 3, './data/dqn_hage_{}players_weights_t3.h5'.format(PLAYER_NUM)))
-        # self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 2, './data/dqn_hage_{}players_weights_t2.h5'.format(PLAYER_NUM)))
+        for i in range(NPC_PLAYER_NUM - 3): self.env.appned_player(RandomPlayer(self.np_random))
+        self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 3, './data/dqn_hage_{}players_weights_t3.h5'.format(PLAYER_NUM)))
+        self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 2, './data/dqn_hage_{}players_weights_t2.h5'.format(PLAYER_NUM)))
         self.env.appned_player(TrainedPlayer(self.env, NPC_PLAYER_NUM - 1, './data/dqn_hage_{}players_weights_t.h5'.format(PLAYER_NUM)))
         self.player = AIPlayer()
         self.env.appned_player(self.player)
@@ -253,7 +254,7 @@ class Hage(gym.Env):
         reward = 0.
         if self.player.used[action] == 1.:
             # reward = -11.
-            reward = -51.
+            reward = -1000.
             done = True
         else:
             self.player.set_action(action)
@@ -265,9 +266,8 @@ class Hage(gym.Env):
                 winners = self.env.get_winners()
                 if (PLAYER_NUM - 1) in winners:
                     reward = 1000.
-                else:
-                    # pass
-                    reward = 201.
+                # else:
+                #     reward = 201.
                 done = True
             else:
                 self.env.step()
